@@ -2,13 +2,16 @@ package hello.chat.controller;
 
 import hello.chat.dto.ChatDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class WebSocketController {
     private final SimpMessagingTemplate simpleMessagingTemplate;
 
@@ -23,7 +26,8 @@ public class WebSocketController {
      * @param accessor
      */
     @MessageMapping("/chat")
-    public void sendMessage(ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
-        simpleMessagingTemplate.convertAndSend("/sub/chat" + chatDto.getChannelId(), chatDto);
+    public void sendMessage(@RequestBody ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
+        log.info("sendMessage : {}", chatDto.getMessage());
+        simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
     }
 }

@@ -15,12 +15,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-
         // 앞으로 웹 소켓 서버의 엔드포인트는 /ws 이다.
         registry.addEndpoint("/ws")
-                // 클라이언트는 다른 origin 이므로 CORS 오류를 방지하기 위해 setAllowedOrigins 를 미리 사용해서
-                // 허용할 origin 을 등록해둔다.
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:3000")
+                .withSockJS();
     }
 
     /**
