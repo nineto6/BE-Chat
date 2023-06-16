@@ -1,4 +1,4 @@
-package hello.chat.dto;
+package hello.chat.model;
 
 import lombok.Builder;
 import lombok.Getter;
