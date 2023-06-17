@@ -27,6 +27,9 @@ public enum ErrorCode {
     // Transaction Delete Error
     DELETE_ERROR(200, "9999", "Delete Transaction Error Exception"),
 
+    // Authorization 관련 Error
+    UNAUTHORIZED_ERROR(200, "7777", "Unauthenticated User"),
+
     ; // End
 
     /**

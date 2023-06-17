@@ -1,6 +1,10 @@
 package hello.chat.config;
 
+import hello.chat.config.websocket.ChatErrorHandler;
+import hello.chat.config.websocket.ChatPreHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -8,7 +12,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final ChatPreHandler chatPreHandler;
+    private final ChatErrorHandler chatErrorHandler;
+
     /**
      * 엔드 포인트를 등록하기 위해 registerStompEndpoints 를 override 한다.
      * @param registry
@@ -19,6 +27,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins("http://localhost:3000")
                 .withSockJS();
+        registry.setErrorHandler(chatErrorHandler);
     }
 
     /**
@@ -34,5 +43,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // setApplicationDestinationPrefixes() 를 사용해서 /pub 가 prefix 로 붙은 메시지들은
         // @MessageMapping 이 붙은 method 로 바운드된다.
         registry.setApplicationDestinationPrefixes("/pub"); // 발행
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(chatPreHandler);
     }
 }

@@ -95,10 +95,9 @@ public class TokenUtils {
             throw exception;
         } catch (JwtException exception) {
             log.error("Token Tampered", exception);
-            return false;
+            throw exception;
         } catch(NullPointerException exception) {
-            log.error("Token is null");
-            return false;
+            throw exception;
         }
     }
 
