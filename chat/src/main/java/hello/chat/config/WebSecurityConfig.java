@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -61,6 +62,8 @@ public class WebSecurityConfig {
         log.debug("[+] WebSecurityConfig Start !");
 
         http
+                .httpBasic().disable() // rest api 만을 고려하여 기본설정 해제
+
                 // [STEP1] 서버에 인증정보를 저장하지 않기에 csrf 를 사용하지 않는다.
                 .csrf().disable()
 
@@ -155,7 +158,7 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.addAllowedOrigin("https://localhost:3000/");
+        configuration.addAllowedOrigin("http://localhost:3000/"); // 연결 오류로 인하여 https -> http 임시 변경
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
         configuration.setAllowCredentials(true);
