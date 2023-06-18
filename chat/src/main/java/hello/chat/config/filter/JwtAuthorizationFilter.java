@@ -47,6 +47,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             return;
         }
 
+        log.debug("[] header URI : {}", request.getRequestURI());
+        // 2-1. 첫 /ws 엔드포인트가 붙은 URL 일 경우 로직 처리 없이 다음 필터로 이동 (preHandler 로 JWT 인증 처리)
+        if(request.getRequestURI().startsWith("/ws")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 3. OPTIONS 요청일 경우 => 로직 처리 없이 다음 필터로 이동
         if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
             filterChain.doFilter(request, response);
@@ -81,20 +88,20 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                             filterChain.doFilter(request, response);
                         } else {
                             // 사용자 아이디가 존재 하지 않을 경우
-                            throw new BusinessExceptionHandler("Token isn't userId", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+                            throw new BusinessExceptionHandler("Token isn't userId", ErrorCode.UNAUTHORIZED_ERROR);
                         }
                     } else {
                         // 현재 토큰이 로그아웃 되어 있는 경우
-                        throw new BusinessExceptionHandler("Token is logged out", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+                        throw new BusinessExceptionHandler("Token is logged out", ErrorCode.UNAUTHORIZED_ERROR);
                     }
                 } else {
                     // 토큰이 유효하지 않은 경우
-                    throw new BusinessExceptionHandler("Token is invalid", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+                    throw new BusinessExceptionHandler("Token is invalid", ErrorCode.UNAUTHORIZED_ERROR);
                 }
             }
             else {
                 // [STEP2-1] 토큰이 존재하지 않는 경우
-                throw new BusinessExceptionHandler("Token is null", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+                throw new BusinessExceptionHandler("Token is null", ErrorCode.UNAUTHORIZED_ERROR);
             }
         } catch (Exception e) {
             // Token 내에 Exception 이 발생 하였을 경우 => 클라이언트에 응답값을 반환하고 종료합니다.
