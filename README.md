@@ -10,6 +10,8 @@ WebSocket 위에서 동작하는 STOMP(Simple Text Oriented Messaging Protocol)�
 생성된 채팅방은 다른 사용자의 채팅방 목록에 뜨게 되어 채팅방 입장시 실시간 채팅을 할 수 있게 한다.
 
 ## 출처
+- STOMP를 참고한 사이트 출처
+    - [dldmswjd322 블로그](https://velog.io/@dldmswjd322/Spring-boot-React-STOMP%EB%A1%9C-%EC%8B%A4%EC%8B%9C%EA%B0%84-%EC%B1%84%ED%8C%85-%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0-1-Spring-boot-%EC%84%9C%EB%B2%84-%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0)
 
 ## 개발 환경
 - Project : Gradle
@@ -103,8 +105,9 @@ public class WebSocketController {
         simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
     }
 }
-
 ```
+<br/>
+<hr/>
 
 ###### 20230616
 > ## build.gradle 코드 추가
