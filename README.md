@@ -22,6 +22,12 @@ WebSocket 위에서 동작하는 STOMP(Simple Text Oriented Messaging Protocol)�
    - Lombok : 1.18.26
 - 추가된 Dependencies
    - Spring Security : 5.7.8
+   - Mybatis : 3.5.11
+   - H2 Database : 2.1.214
+   - Redis : 2.7.11
+   - Jwt : 0.9.1
+   - Jaxb-Runtime(DataTypeConverter) : 2.3.2
+   - Json-Simple : 1.1.1
 <br/>
 <hr/>
 
