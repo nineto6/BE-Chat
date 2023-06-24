@@ -31,7 +31,7 @@ public class WebSocketController {
      */
     @MessageMapping("/chat")
     public void sendMessage(@RequestBody ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
-        log.info("Channel : {}, sendMessage : {}", chatDto.getChannelId(), chatDto.getMessage());
+        log.info("Channel : {}, getWriterNm : {}, sendMessage : {}", chatDto.getChannelId(), chatDto.getWriterNm(), chatDto.getMessage());
         simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
     }
 }

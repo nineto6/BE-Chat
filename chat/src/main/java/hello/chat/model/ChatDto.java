@@ -12,6 +12,6 @@ import lombok.Getter;
 @Builder
 public class ChatDto {
     private String channelId;
-    private String writerId;
+    private String writerNm;
     private String message;
 }
