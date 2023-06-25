@@ -3,7 +3,6 @@ package hello.chat.config.websocket;
 import hello.chat.common.codes.AuthConstants;
 import hello.chat.common.utils.TokenUtils;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,13 +18,11 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 @RequiredArgsConstructor
 @Component
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
-public class ChatPreHandler implements ChannelInterceptor {
+public class JwtAuthorizationPreHandler implements ChannelInterceptor {
     private final RedisTemplate<String, String> redisTemplate;
 
     @Override
