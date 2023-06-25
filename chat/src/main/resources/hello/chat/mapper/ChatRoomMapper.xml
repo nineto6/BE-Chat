@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="hello.chat.mapper.ChatRoomMapper">
+
+    <!-- 방 생성 -->
+    <insert id="save" useGeneratedKeys="true" keyProperty="chatRoomSq">
+        INSERT INTO TB_CHAT_ROOM
+        (CHANNEL_ID, TITLE, WRITER_ID, WRITER_NM, DATE_TIME)
+        VALUES (#{channelId}, #{title}, #{writerId}, #{writerNm}, #{dateTime})
+    </insert>
+
+    <!-- 채널 ID 로 조회 -->
+    <select id="findByChannelId" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+        WHERE CHANNEL_ID = #{channelId}
+    </select>
+
+    <!-- 채널 모두 조회 -->
+    <select id="findAll" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+    </select>
+
+    <!-- writerId 와 channelId 로 ChatRoom 삭제 -->
+    <delete id="deleteByWriterIdAndChannelId">
+        DELETE FROM TB_CHAT_ROOM
+        WHERE WRITER_ID = #{writerId} AND CHANNEL_ID = #{channelId}
+    </delete>
+</mapper>
