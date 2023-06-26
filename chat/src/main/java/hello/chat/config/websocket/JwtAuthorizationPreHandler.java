@@ -30,7 +30,7 @@ public class JwtAuthorizationPreHandler implements ChannelInterceptor {
         StompHeaderAccessor headerAccessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         // 연결 요청일 경우
-        if(StompCommand.CONNECT.equals(headerAccessor.getCommand())) {
+        if(StompCommand.CONNECT.equals(headerAccessor != null ? headerAccessor.getCommand() : null)) {
             String authorizationHeader = String.valueOf(headerAccessor.getNativeHeader(AuthConstants.AUTH_HEADER));
 
             String token = "";
