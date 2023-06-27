@@ -84,7 +84,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 @Builder
 public class ChatDto {
     private String channelId;
-    private String writerId;
+    private String writerNm;
     private String message;
 }
 ```
@@ -109,7 +109,7 @@ public class WebSocketController {
      */
     @MessageMapping("/chat")
     public void sendMessage(@RequestBody ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
-        log.info("sendMessage : {}", chatDto.getMessage());
+        log.info("Channel : {}, getWriterNm : {}, sendMessage : {}", chatDto.getChannelId(), chatDto.getWriterNm(), chatDto.getMessage());
         simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
     }
 }
@@ -136,6 +136,7 @@ public class WebSocketController {
     - UserDto 작성
     - UserMapper 작성
     - UserMapper XML 작성 (mybatis)
+    - UserMapperTest 작성
     - UserService 인터페이스 작성
     - UserServiceImpl 작성
     ---
@@ -526,3 +527,312 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 > ## 테스트
 <br/>
 <hr/>
+
+##### 20230620
+> ## 계획
+- 인증된 사용자가 채팅방 생성 및 제거를 할 수 있으며, 채팅방을 생성 후 입장해야지만 실시간 채팅을 할 수 있게 한다. (채팅방 생성시 UUID를 부여한다)
+- 인증된 사용자는 자기가 생성한 채팅방만 제거를 할 수 있다.
+
+> ## TB_CHAT_ROOM.sql 추가
+- CHANNEL_ID는 UUID를 사용할 계획이므로 VARCHAR(36)을 부여한다. 
+```SQL
+create table tb_chat_room(
+   chat_room_sq       INT AUTO_INCREMENT PRIMARY KEY,
+   channel_id         VARCHAR(36) NOT NULL,
+   title              VARCHAR(30) NOT NULL,
+   writer_id          VARCHAR(20) NOT NULL,
+   writer_nm          VARCHAR(20) NOT NULL,
+   date_time          TIMESTAMP NOT NULL
+);
+```
+
+> ## SuccessCode 코드 변경
+- 성공 코드의 '코드 값'을 반환하는 code 제거
+```Java
+@Getter
+public enum SuccessCode {
+
+    /**
+     * ******************************* Success CodeList ***************************************
+     */
+    // 조회 성공 코드 (HTTP Response: 200 OK)
+    SELECT_SUCCESS(200, "SELECT SUCCESS"),
+    // 삭제 성공 코드 (HTTP Response: 200 OK)
+    DELETE_SUCCESS(200, "DELETE SUCCESS"),
+    // 삽입 성공 코드 (HTTP Response: 201 Created)
+    INSERT_SUCCESS(201, "INSERT SUCCESS"),
+    // 수정 성공 코드 (HTTP Response: 201 Created)
+    UPDATE_SUCCESS(204,  "UPDATE SUCCESS"),
+
+    ; // End
+
+    /**
+     * ******************************* Success Code Constructor ***************************************
+     */
+    // 성공 코드의 '코드 상태'를 반환한다.
+    private final int status;
+    
+    // 성공 코드의 '코드 값'을 반환한다.
+    //private final String code;
+
+    // 성공 코드의 '코드 메시지'를 반환한다.s
+    private final String message;
+
+    // 생성자 구성
+    SuccessCode(final int status, final String message) {
+        this.status = status;
+        this.message = message;
+    }
+}
+```
+> ## ChatPreHandler 이름 변경 -> JwtAuthorizationPreHandler
+
+> ## ChatRoomDto 작성
+```Java
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class ChatRoomDto {
+    private int chatRoomSq; // 기본키
+    private String channelId;
+    private String title;
+    private String writerId;
+    private String writerNm;
+    private LocalDateTime dateTime;// 생성 날짜
+
+    @Builder
+    public ChatRoomDto(int chatRoomSq, String channelId, String title, String writerId, String writerNm, LocalDateTime dateTime) {
+        this.chatRoomSq = chatRoomSq;
+        this.channelId = channelId;
+        this.title = title;
+        this.writerId = writerId;
+        this.writerNm = writerNm;
+        this.dateTime = dateTime;
+    }
+}
+```
+
+> ## ChatRoomMapper 작성
+```Java
+@Mapper
+public interface ChatRoomMapper {
+    void save(ChatRoomDto chatRoomDto); // 저장
+    Optional<ChatRoomDto> findByChannelId(String chanelId); // 채널 아이디로 조회
+    List<ChatRoomDto> findAll(); // 모두 조회
+    void deleteByWriterIdAndChannelId(@Param("writerId") String writerId, @Param("channelId") String channelId); // 생성 아이디 AND 채널 아이디로 삭제
+}
+```
+
+> ## ChatRoomMapper.xml 작성
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="hello.chat.mapper.ChatRoomMapper">
+
+    <!-- 방 생성 -->
+    <insert id="save" useGeneratedKeys="true" keyProperty="chatRoomSq">
+        INSERT INTO TB_CHAT_ROOM
+        (CHANNEL_ID, TITLE, WRITER_ID, WRITER_NM, DATE_TIME)
+        VALUES (#{channelId}, #{title}, #{writerId}, #{writerNm}, #{dateTime})
+    </insert>
+
+    <!-- 채널 ID 로 조회 -->
+    <select id="findByChannelId" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+        WHERE CHANNEL_ID = #{channelId}
+    </select>
+
+    <!-- 채널 모두 조회 -->
+    <select id="findAll" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+    </select>
+
+    <!-- writerId 와 channelId 로 ChatRoom 삭제 -->
+    <delete id="deleteByWriterIdAndChannelId">
+        DELETE FROM TB_CHAT_ROOM
+        WHERE WRITER_ID = #{writerId} AND CHANNEL_ID = #{channelId}
+    </delete>
+</mapper>
+```
+
+> ## 테스트 케이스 전용 H2 Database 생성 및 Spring Profile 설정
+- chat\src\main\resources\application.properties 에 local 전용 프로필 설정
+```TEXT
+# ADD profile 
+spring.profiles.active=local
+
+# h2 database
+spring.datasource.url=jdbc:h2:tcp://localhost/~/test
+spring.datasource.username=sa
+spring.datasource.password=
+
+#MyBatis log
+mybatis.configuration.map-underscore-to-camel-case=true
+logging.level.hello.chat.mapper.mybatis=trace
+
+# Log
+logging.level.hello.chat=trace
+
+# Secret Key
+custom.jwt-access-secret-key=accessSecretKey
+custom.jwt-refresh-secret-key=refreshSecretKey
+
+# Redis
+spring.redis.host=localhost
+spring.redis.port=6379
+```
+
+- chat\src\test\resources\application.properties 에 test 전용 프로필 설정
+
+```Text
+# ADD profile
+spring.profiles.active=test
+
+# h2 database (testcase)
+spring.datasource.url=jdbc:h2:tcp://localhost/~/testcase
+spring.datasource.username=sa
+spring.datasource.password=
+
+#MyBatis log
+mybatis.configuration.map-underscore-to-camel-case=true
+logging.level.hello.chat.mapper.mybatis=trace
+
+# Log
+logging.level.hello.chat=trace
+
+# Secret Key
+custom.jwt-access-secret-key=accessSecretKey
+custom.jwt-refresh-secret-key=refreshSecretKey
+
+# Redis
+spring.redis.host=localhost
+spring.redis.port=6379
+```
+
+> ## ChatRoomMapperTest 작성 및 테스트
+```Java
+@SpringBootTest
+@Transactional
+public class ChatRoomMapperTest {
+
+    @Autowired
+    ChatRoomMapper chatRoomMapper;
+
+    @Test
+    @DisplayName("ChatRoom 저장 테스트")
+    void save() {
+        // given
+        ChatRoomDto chatRoom = ChatRoomDto.builder()
+                .channelId("저장 테스트")
+                .title("아무나")
+                .writerId("asd123")
+                .writerNm("대한민국")
+                .dateTime(LocalDateTime.now())
+                .build();
+
+        // when
+        chatRoomMapper.save(chatRoom);
+
+        // then
+        Optional<ChatRoomDto> selectedChatRoom = chatRoomMapper.findByChannelId("저장 테스트");
+        assertThat(selectedChatRoom.get().getChannelId()).isEqualTo("저장 테스트");
+    }
+
+    @Test
+    @DisplayName("ChatRoom 채널 아이디로 조회 테스트")
+    void findByChanelId() {
+        // given
+        ChatRoomDto chatRoom = ChatRoomDto.builder()
+                .channelId("조회 테스트")
+                .title("아무나123")
+                .writerId("asd123")
+                .writerNm("고기")
+                .dateTime(LocalDateTime.now())
+                .build();
+        chatRoomMapper.save(chatRoom);
+
+        // when
+        Optional<ChatRoomDto> selectedChatRoom = chatRoomMapper.findByChannelId("조회 테스트");
+
+        // then
+        assertThat(selectedChatRoom.get().getChannelId()).isEqualTo("조회 테스트");
+    }
+
+    @Test
+    @DisplayName("ChatRoom 모두 조회 테스트")
+    void findAll() {
+        // given
+        ChatRoomDto chatRoom1 = ChatRoomDto.builder()
+                .channelId("12345")
+                .title("채팅할사람~")
+                .writerId("asd123")
+                .writerNm("리듬")
+                .dateTime(LocalDateTime.now())
+                .build();
+        ChatRoomDto chatRoom2 = ChatRoomDto.builder()
+                .channelId("678910")
+                .title("채팅만")
+                .writerId("qwe456")
+                .writerNm("소리")
+                .dateTime(LocalDateTime.now())
+                .build();
+
+        chatRoomMapper.save(chatRoom1);
+        chatRoomMapper.save(chatRoom2);
+
+        // when
+        List<ChatRoomDto> chatRoomMapperAll = chatRoomMapper.findAll();
+
+        // then
+        assertThat(chatRoomMapperAll.size()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("ChatRoom ChannelId AND writerId로 삭제 테스트")
+    void deleteByChannelId() {
+        // given
+        ChatRoomDto chatRoom1 = ChatRoomDto.builder()
+                .channelId("123123")
+                .title("아무나1")
+                .writerId("asd123")
+                .writerNm("한국1")
+                .dateTime(LocalDateTime.now())
+                .build();
+        ChatRoomDto chatRoom2 = ChatRoomDto.builder()
+                .channelId("456456")
+                .title("아무나2")
+                .writerId("qwe456")
+                .writerNm("한국2")
+                .dateTime(LocalDateTime.now())
+                .build();
+
+        chatRoomMapper.save(chatRoom1);
+        chatRoomMapper.save(chatRoom2);
+
+        // when
+        chatRoomMapper.deleteByWriterIdAndChannelId("asd123", "123123");
+
+        // then
+        List<ChatRoomDto> chatRoomMapperAll = chatRoomMapper.findAll();
+        assertThat(chatRoomMapperAll.size()).isEqualTo(1);
+        assertThat(chatRoomMapperAll.get(0).getChannelId()).isEqualTo("456456");
+    }
+}
+```
+
+<br/>
+<hr/>
+
+###### 20230625
+> ## JwtAuthorizationPreHandler 코드 변경
+> ## ChatRoomService 작성
+> ## ChatRoomServiceImpl 작성
+> ## ChatRoomController 작성
+> ## GlobalExceptionHandler 작성
+> ## ErrorCode 코드 변경
+> ## ChatErrorHandler 코드 변경
+> ## ChatRoomPreHandler 작성
+> ## WebSocketConfig 코드 변경
+> ## WebSocketController 코드 변경
