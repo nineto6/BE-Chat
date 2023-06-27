@@ -29,23 +29,33 @@ public class ChatErrorHandler extends StompSubProtocolErrorHandler {
         Throwable exception = ex;
 
         if (exception instanceof MessageDeliveryException) {
-            log.info("메세지 예외 : {}", exception.getMessage());
-            return handleUnauthorizedException(clientMessage, ex.getMessage());
+            log.info("메세지 예외 : {}", exception.getMessage(), exception);
+            return handleMessageDeliveryException(clientMessage, ex.getMessage(), exception);
         }
 
         if(exception instanceof MalformedJwtException) {
-            log.info("멀폼 예외 : {}", exception.getMessage());
-            return handleUnauthorizedException(clientMessage, ex.getMessage());
+            log.info("멀폼 예외 : {}", exception.getMessage(), exception);
+            return handleUnauthorizedException(clientMessage, ex.getMessage(), exception);
         }
 
         return super.handleClientMessageProcessingError(clientMessage, ex);
     }
 
-    private Message<byte[]> handleUnauthorizedException(Message<byte[]> clientMessage, String message) {
+    private Message<byte[]> handleUnauthorizedException(Message<byte[]> clientMessage, String message, Throwable ex) {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .result(message)
-                .resultCode(ErrorCode.UNAUTHORIZED_ERROR.hashCode())
+                .resultCode(ErrorCode.UNAUTHORIZED_ERROR.getStatus())
                 .resultMsg(ErrorCode.UNAUTHORIZED_ERROR.getDivisionCode())
+                .build();
+
+        return prepareErrorMessage(clientMessage, errorResponse, ErrorCode.UNAUTHORIZED_ERROR.getMessage());
+    }
+
+    private Message<byte[]> handleMessageDeliveryException(Message<byte[]> clientMessage, String message, Throwable ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .result(message)
+                .resultCode(ErrorCode.BUSINESS_EXCEPTION_ERROR.getStatus())
+                .resultMsg(ErrorCode.BUSINESS_EXCEPTION_ERROR.getDivisionCode())
                 .build();
 
         return prepareErrorMessage(clientMessage, errorResponse, ErrorCode.UNAUTHORIZED_ERROR.getMessage());

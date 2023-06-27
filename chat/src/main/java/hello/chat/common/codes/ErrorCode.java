@@ -3,6 +3,7 @@ package hello.chat.common.codes;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
 
 /**
  * [공통 코드] API 통신에 대한 '에러 코드'를 Enum 형태로 관리를 한다.
@@ -14,22 +15,41 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public enum ErrorCode {
     BUSINESS_EXCEPTION_ERROR(200, "B999", "Business Exception Error"),
+    GLOBAL_EXCEPTION_ERROR(200, "C999", "Global Exception Error"),
 
     /**
      * *********************************** custom Error CodeList ********************************************
      */
-    // Transaction Insert Error
+
+    /**
+     * Transaction Insert Error
+     */
     INSERT_ERROR(200, "9999", "Insert Transaction Error Exception"),
 
-    // Transaction Update Error
+    /**
+     * Transaction Update Error
+     */
     UPDATE_ERROR(200, "9999", "Update Transaction Error Exception"),
 
-    // Transaction Delete Error
+    /**
+     * Transaction Delete Error
+     */
     DELETE_ERROR(200, "9999", "Delete Transaction Error Exception"),
 
-    // Authorization 관련 Error
+    /**
+     * Authorization 관련 Error
+     */
     UNAUTHORIZED_ERROR(200, "7777", "Unauthenticated User"),
 
+    /**
+     * 400 BAD_REQUEST: 잘못된 요청
+     */
+    BAD_REQUEST(HttpStatus.BAD_REQUEST.value(), "6666", "Bad Request"),
+
+    /**
+     * 404 NOT_FOUND: 리소스를 찾을 수 없음
+     */
+    NOT_FOUND(HttpStatus.NOT_FOUND.value(), "6666", "Information not found")
     ; // End
 
     /**
