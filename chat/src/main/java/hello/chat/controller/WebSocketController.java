@@ -1,23 +1,26 @@
 package hello.chat.controller;
 
+import hello.chat.common.codes.ErrorCode;
+import hello.chat.config.exception.BusinessExceptionHandler;
 import hello.chat.model.ChatDto;
+import hello.chat.model.ChatRoomDto;
+import hello.chat.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.socket.messaging.SessionConnectEvent;
 
-import javax.websocket.Session;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 public class WebSocketController {
     private final SimpMessagingTemplate simpleMessagingTemplate;
+    private final ChatRoomService chatRoomService;
 
     /**
      * @MessageMapping annotation 은 메시지의 destination 이 /hello 였다면 해당 sendMessage() method 가 불리도록 해준다.
@@ -29,9 +32,17 @@ public class WebSocketController {
      * @param chatDto
      * @param accessor
      */
-    @MessageMapping("/chat")
+    @MessageMapping("/chat") // Publish
     public void sendMessage(@RequestBody ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
         log.info("Channel : {}, getWriterNm : {}, sendMessage : {}", chatDto.getChannelId(), chatDto.getWriterNm(), chatDto.getMessage());
+
+        // publish 요청시
+        Optional<ChatRoomDto> join = chatRoomService.join(chatDto.getChannelId());
+
+        if(join.isEmpty()) {
+            throw new BusinessExceptionHandler("ChatRoom does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
         simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
     }
 }

@@ -1,7 +1,8 @@
 package hello.chat.config;
 
 import hello.chat.config.websocket.ChatErrorHandler;
-import hello.chat.config.websocket.ChatPreHandler;
+import hello.chat.config.websocket.ChatRoomPreHandler;
+import hello.chat.config.websocket.JwtAuthorizationPreHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -14,7 +15,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    private final ChatPreHandler chatPreHandler;
+    private final JwtAuthorizationPreHandler jwtAuthorizationPreHandler;
+    private final ChatRoomPreHandler chatRoomPreHandler;
     private final ChatErrorHandler chatErrorHandler;
 
     /**
@@ -47,6 +49,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(chatPreHandler);
+        registration.interceptors(jwtAuthorizationPreHandler);
+        registration.interceptors(chatRoomPreHandler);
     }
 }
