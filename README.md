@@ -115,7 +115,7 @@ public class WebSocketController {
 }
 ```
 > ## 실행 결과
-- front 이미지
+- Front 이미지
 <br/>
 <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_02.png">
 <br/>
@@ -384,7 +384,7 @@ public class ChatPreHandler implements ChannelInterceptor {
         StompHeaderAccessor headerAccessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         // 연결 요청일 경우
-        if(StompCommand.CONNECT.equals(headerAccessor.getCommand())) {
+        if(StompCommand.CONNECT.equals(headerAccessor != null ? headerAccessor.getCommand() : null)) {
             String authorizationHeader = String.valueOf(headerAccessor.getNativeHeader(AuthConstants.AUTH_HEADER));
 
             String token = "";
@@ -524,7 +524,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 }
 ```
-> ## 테스트
+> ## 실행 결과
+- ChatPreHandler Log 이미지
+    - 당시 이미지를 못찍어서 6월 25일에 찍은 사진 JwtAuthorizationPreHandler -> ChatPreHandler
+<img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_02_authorization.png">
+
 <br/>
 <hr/>
 
@@ -826,13 +830,27 @@ public class ChatRoomMapperTest {
 <hr/>
 
 ###### 20230625
-> ## JwtAuthorizationPreHandler 코드 변경
 > ## ChatRoomService 작성
+
 > ## ChatRoomServiceImpl 작성
+
 > ## ChatRoomController 작성
+
 > ## GlobalExceptionHandler 작성
+
 > ## ErrorCode 코드 변경
+
 > ## ChatErrorHandler 코드 변경
+
 > ## ChatRoomPreHandler 작성
+
 > ## WebSocketConfig 코드 변경
+
 > ## WebSocketController 코드 변경
+
+> ## 실행 결과
+- WebSocket 요청 처리 로그 이미지
+    - publish
+        - <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
+    - subscribe
+        - <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
