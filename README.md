@@ -525,8 +525,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 }
 ```
 > ## 실행 결과
-- ChatPreHandler Log 이미지
-    - 당시 이미지를 못찍어서 6월 25일에 찍은 사진 JwtAuthorizationPreHandler -> ChatPreHandler
+- 25일에 찍은 ChatPreHandler Log 이미지
+    - JwtAuthorizationPreHandler -> ChatPreHandler
 <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_02_authorization.png">
 
 <br/>
@@ -535,7 +535,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 ##### 20230620
 > ## 계획
 - 인증된 사용자가 채팅방 생성 및 제거를 할 수 있으며, 채팅방을 생성 후 입장해야지만 실시간 채팅을 할 수 있게 한다. (채팅방 생성시 UUID를 부여한다)
-- 인증된 사용자는 자기가 생성한 채팅방만 제거를 할 수 있다.
+- 인증된 사용자는 자신이 생성한 채팅방만 제거를 할 수 있다.
+- subscribe(구독)의 경우 ChatRoomPreHandler 를 이용하여 생성 된 채팅방인지 체크한다.
+- publish(발행)의 경우 WebSocketController에서 MessageMapping을 이용한 메서드에서 구독한 클라이언트에게 발행한 메세지를 보내기 전에 생성 된 채팅방인지 체크한다.
 
 > ## TB_CHAT_ROOM.sql 추가
 - CHANNEL_ID는 UUID를 사용할 계획이므로 VARCHAR(36)을 부여한다. 
@@ -589,7 +591,7 @@ public enum SuccessCode {
     }
 }
 ```
-> ## ChatPreHandler 이름 변경 -> JwtAuthorizationPreHandler
+> ## ChatPreHandler를 JwtAuthorizationPreHandler로 이름 변경
 
 > ## ChatRoomDto 작성
 ```Java
@@ -831,26 +833,422 @@ public class ChatRoomMapperTest {
 
 ###### 20230625
 > ## ChatRoomService 작성
+```Java
+public interface ChatRoomService {
+    void create(ChatRoomDto chatRoomDto);
+    Optional<ChatRoomDto> join(String chanelId);
+    List<ChatRoomDto> findAll();
+    void delete(String writerId, String channelId);
+}
+```
 
 > ## ChatRoomServiceImpl 작성
+```Java
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class ChatRoomServiceImpl implements ChatRoomService {
+    private final ChatRoomMapper chatRoomMapper;
 
-> ## ChatRoomController 작성
+    @Override
+    @Transactional
+    public void create(ChatRoomDto chatRoomDto) {
+        chatRoomMapper.save(chatRoomDto);
+    }
 
-> ## GlobalExceptionHandler 작성
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ChatRoomDto> join(String chanelId) {
+        return chatRoomMapper.findByChannelId(chanelId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatRoomDto> findAll() {
+        return chatRoomMapper.findAll();
+    }
+
+    @Override
+    @Transactional
+    public void delete(String writerId, String channelId) {
+        Optional<ChatRoomDto> byChannelId = chatRoomMapper.findByChannelId(channelId);
+
+        // channelId 로 조회 후 존재할 경우 삭제
+        if(byChannelId.isPresent()) {
+            chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
+        }
+
+        // 채팅방이 존재하지 않을 경우 예외 throw
+        throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+    }
+}
+```
 
 > ## ErrorCode 코드 변경
+```Java
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public enum ErrorCode {
+    BUSINESS_EXCEPTION_ERROR(200, "B999", "Business Exception Error"),
+    GLOBAL_EXCEPTION_ERROR(200, "C999", "Global Exception Error"),
+    /**
+     * *********************************** custom Error CodeList ********************************************
+     */
+    /**
+     * Transaction Insert Error
+     */
+    INSERT_ERROR(200, "9999", "Insert Transaction Error Exception"),
+
+    /**
+     * Transaction Update Error
+     */
+    UPDATE_ERROR(200, "9999", "Update Transaction Error Exception"),
+
+    /**
+     * Transaction Delete Error
+     */
+    DELETE_ERROR(200, "9999", "Delete Transaction Error Exception"),
+
+    /**
+     * Authorization 관련 Error
+     */
+    UNAUTHORIZED_ERROR(200, "7777", "Unauthenticated User"),
+
+    /**
+     * 400 BAD_REQUEST: 잘못된 요청
+     */
+    BAD_REQUEST(HttpStatus.BAD_REQUEST.value(), "6666", "Bad Request"),
+
+    /**
+     * 404 NOT_FOUND: 리소스를 찾을 수 없음
+     */
+    NOT_FOUND(HttpStatus.NOT_FOUND.value(), "6666", "Information not found")
+    ; // End
+
+    /**
+     * *********************************** Error Code Constructor ********************************************
+     */
+    // 에러 코드의 '코드 상태'을 반환한다.
+    private int status;
+
+    // 에러 코드의 '코드간 구분 값'을 반환한다.
+    private String divisionCode;
+
+    // 에러코드의 '코드 메시지'을 반환한다.
+    private String message;
+
+    // 생성자 구성
+    ErrorCode(final int status, final String divisionCode, final String message) {
+        this.status = status;
+        this.divisionCode = divisionCode;
+        this.message = message;
+    }
+}
+```
+
+> ## ChatRoomController 작성
+```Java
+@RestController
+@RequestMapping("/api/chatroom")
+@RequiredArgsConstructor
+public class ChatRoomController {
+    private final ChatRoomService chatRoomService;
+    @PostMapping
+    public ResponseEntity<ApiResponse> createChatRoom(HttpServletRequest request, @RequestBody Map<String, String> titleMap) {
+        Map<String, String> userIdAndUserNmMap = getUserIdAndUserNmInMap(request);
+
+        ChatRoomDto chatRoomDto = ChatRoomDto.builder()
+                .channelId(UUID.randomUUID().toString())
+                .title(titleMap.get("title"))
+                .writerId(userIdAndUserNmMap.get("writerId"))
+                .writerNm(userIdAndUserNmMap.get("writerNm"))
+                .dateTime(LocalDateTime.now())
+                .build();
+
+        chatRoomService.create(chatRoomDto);
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultMsg(SuccessCode.INSERT_SUCCESS.getMessage())
+                .resultCode(SuccessCode.INSERT_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse> findAllChatRoom() {
+
+        List<ChatRoomDto> chatRoomDtoList = chatRoomService.findAll();
+
+        ApiResponse ar = ApiResponse.builder()
+                .result(chatRoomDtoList)
+                .resultMsg(SuccessCode.SELECT_SUCCESS.getMessage())
+                .resultCode(SuccessCode.SELECT_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse> deleteChatRoom(HttpServletRequest request, @RequestBody Map<String, String> channelIdMap) {
+        Map<String, String> userIdAndUserNmInMap = getUserIdAndUserNmInMap(request);
+
+        chatRoomService.delete(userIdAndUserNmInMap.get("writerId"), channelIdMap.get("channelId"));
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultMsg(SuccessCode.DELETE_SUCCESS.getMessage())
+                .resultCode(SuccessCode.DELETE_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    /**
+     * Request 안에 존재하는 JWT token 정보를 기반으로 userId, userNm 을 Map 으로 반환하는 메서드
+     * @param request
+     * @return
+     */
+    private static Map<String, String> getUserIdAndUserNmInMap(HttpServletRequest request) {
+        // 1. Request 에서 Header 추출
+        String header = request.getHeader(AuthConstants.AUTH_HEADER);
+
+        // 2. Header 에서 JWT Refresh Token 추출
+        String token = TokenUtils.getTokenFormHeader(header);
+
+        // 3. token 으로부터 userId, userNm 추출
+        String userId = TokenUtils.getUserIdFormAccessToken(token);
+        String userNm = TokenUtils.getUserNmFormAccessToken(token);
+
+        Map<String, String> chatRoomIdAndNmMap = new HashMap<>();
+        chatRoomIdAndNmMap.put("writerId", userId);
+        chatRoomIdAndNmMap.put("writerNm", userNm);
+
+        return chatRoomIdAndNmMap;
+    }
+}
+```
+
+> ## GlobalExceptionHandler 작성
+```Java
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BusinessExceptionHandler.class)
+    public ResponseEntity<ApiResponse> handleBusinessException(final RuntimeException e) {
+        log.info("Business Exception Handling Stack Trace : ", e);
+
+        ApiResponse ar = ApiResponse.builder()
+                .result(e.getMessage())
+                .resultCode(ErrorCode.BUSINESS_EXCEPTION_ERROR.getStatus())
+                .resultMsg(ErrorCode.BUSINESS_EXCEPTION_ERROR.getMessage())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse> handleRuntimeException(final RuntimeException e) {
+        log.info("Global Exception Handling Stack Trace : ", e);
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultCode(ErrorCode.BAD_REQUEST.getStatus())
+                .resultMsg(ErrorCode.BAD_REQUEST.getMessage())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+}
+```
 
 > ## ChatErrorHandler 코드 변경
+```Java
+@Component
+@Slf4j
+public class ChatErrorHandler extends StompSubProtocolErrorHandler {
+
+    public ChatErrorHandler() {
+        super();
+    }
+
+    @Override
+    public Message<byte[]> handleClientMessageProcessingError(Message<byte[]>clientMessage, Throwable ex) {
+        Throwable exception = ex;
+
+        if (exception instanceof MessageDeliveryException) {
+            log.info("메세지 예외 : {}", exception.getMessage(), exception); // 변경 부분
+            return handleMessageDeliveryException(clientMessage, ex.getMessage(), exception); // 변경 부분
+        }
+
+        if(exception instanceof MalformedJwtException) {
+            log.info("멀폼 예외 : {}", exception.getMessage(), exception); // 변경 부분
+            return handleUnauthorizedException(clientMessage, ex.getMessage(), exception); // 변경 부분
+        }
+
+        return super.handleClientMessageProcessingError(clientMessage, ex);
+    }
+
+    private Message<byte[]> handleUnauthorizedException(Message<byte[]> clientMessage, String message, Throwable ex) { // 변경 부분
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .result(message)
+                .resultCode(ErrorCode.UNAUTHORIZED_ERROR.getStatus()) // 변경 부분
+                .resultMsg(ErrorCode.UNAUTHORIZED_ERROR.getDivisionCode())
+                .build();
+
+        return prepareErrorMessage(clientMessage, errorResponse, ErrorCode.UNAUTHORIZED_ERROR.getMessage());
+    }
+
+    // 변경 부분
+    private Message<byte[]> handleMessageDeliveryException(Message<byte[]> clientMessage, String message, Throwable ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .result(message)
+                .resultCode(ErrorCode.BUSINESS_EXCEPTION_ERROR.getStatus())
+                .resultMsg(ErrorCode.BUSINESS_EXCEPTION_ERROR.getDivisionCode())
+                .build();
+
+        return prepareErrorMessage(clientMessage, errorResponse, ErrorCode.UNAUTHORIZED_ERROR.getMessage());
+    }
+
+    private Message<byte[]> prepareErrorMessage(Message<byte[]> clientMessage, ErrorResponse errorResponse, String message) {
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.ERROR);
+
+        accessor.setMessage(message);
+        accessor.setLeaveMutable(true);
+
+        return MessageBuilder.createMessage(message.getBytes(StandardCharsets.UTF_8), accessor.getMessageHeaders());
+    }
+}
+```
 
 > ## ChatRoomPreHandler 작성
+```Java
+@RequiredArgsConstructor
+@Component
+@Slf4j
+@Order(Ordered.HIGHEST_PRECEDENCE + 98)
+public class ChatRoomPreHandler implements ChannelInterceptor {
+    private final ChatRoomService chatRoomService;
+    @Override
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+        StompHeaderAccessor headerAccessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        StompCommand stompCommand = headerAccessor != null ? headerAccessor.getCommand() : null;
+
+        // SUBSCRIBE(구독) 일 때 만 ChatRoom 에 등록한 채팅방이 있을 경우 로직
+        if(StompCommand.SUBSCRIBE.equals(stompCommand)) {
+            log.info("Destination : {}", headerAccessor.getDestination());
+            String destination = headerAccessor.getDestination() != null ? headerAccessor.getDestination() : null;
+            String channelId = null;
+
+            if(destination == null) {
+                throw new MessageDeliveryException("Invalid payload");
+            }
+
+            String[] split = headerAccessor.getDestination().split("/sub/chat/");
+            channelId = split[split.length - 1];
+            log.info("channelId : {}", channelId);
+
+            // ChatRoomService 의 join 후 채팅방이 있을 경우 연결 성공
+            Optional<ChatRoomDto> join = chatRoomService.join(channelId);
+
+            if(join.isEmpty()) {
+                // 값이 존재하지 않을 경우 연결 실패
+                throw new MessageDeliveryException("ChatRoom does not exist");
+            }
+        }
+        return message;
+    }
+}
+```
 
 > ## WebSocketConfig 코드 변경
+- JwtAuthorizationPreHandler 추가
+- ChatRoomPreHandler 추가
+```Java
+@Configuration
+@EnableWebSocketMessageBroker
+@RequiredArgsConstructor
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final JwtAuthorizationPreHandler jwtAuthorizationPreHandler; // 변경 부분
+    private final ChatRoomPreHandler chatRoomPreHandler; // 변경 부분
+    private final ChatErrorHandler chatErrorHandler;
+
+    /**
+     * 엔드 포인트를 등록하기 위해 registerStompEndpoints 를 override 한다.
+     * @param registry
+     */
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // 앞으로 웹 소켓 서버의 엔드포인트는 /ws 이다.
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:3000")
+                .withSockJS();
+        registry.setErrorHandler(chatErrorHandler);
+    }
+
+    /**
+     * Message Broker 를 설정하기 위해 configureMessageBroker 를 override 한다.
+     * @param registry
+     */
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // enableSimpleBroker() 를 사용해서 /sub 가 prefix 로 붙은 destination 의 클라이언트에게
+        // 메세지를 보낼 수 있도록 Simple Broker 를 등록한다.
+        registry.enableSimpleBroker("/sub"); // 구독
+
+        // setApplicationDestinationPrefixes() 를 사용해서 /pub 가 prefix 로 붙은 메시지들은
+        // @MessageMapping 이 붙은 method 로 바운드된다.
+        registry.setApplicationDestinationPrefixes("/pub"); // 발행
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(jwtAuthorizationPreHandler); // 변경 부분
+        registration.interceptors(chatRoomPreHandler); // 변경 부분
+    }
+}
+```
 
 > ## WebSocketController 코드 변경
+```Java
+@RestController
+@RequiredArgsConstructor
+@Slf4j
+public class WebSocketController {
+    private final SimpMessagingTemplate simpleMessagingTemplate;
+    private final ChatRoomService chatRoomService;
+
+    /**
+     * @MessageMapping annotation 은 메시지의 destination 이 /hello 였다면 해당 sendMessage() method 가 불리도록 해준다.
+     * - sendMessage() 에서는 simpMessagingTemplate.convertAndSend 를 통해
+     *   /sub/chat/{channelId} 채널을 구독 중인 클라이언트에게 메시지를 전송한다.
+     * - SimpMessagingTemplate 는 특정 브로커로 메시지를 전달한다.
+     * - 현재는 외부 브로커를 붙이지 않았으므로 인메모리에 정보를 저장한다.
+     * 메시지의 payload 는 인자(chatDto)로 들어온다.
+     * @param chatDto
+     * @param accessor
+     */
+    @MessageMapping("/chat") // Publish
+    public void sendMessage(@RequestBody ChatDto chatDto, SimpMessageHeaderAccessor accessor) {
+        log.info("Channel : {}, getWriterNm : {}, sendMessage : {}", chatDto.getChannelId(), chatDto.getWriterNm(), chatDto.getMessage());
+
+        // publish 요청시 channelId 로 조회 후 값이 없을 경우 Exception Throw, 있을 경우 구독한 클라이언트에게 Send
+        Optional<ChatRoomDto> join = chatRoomService.join(chatDto.getChannelId());
+
+        if(join.isEmpty()) {
+            throw new BusinessExceptionHandler("ChatRoom does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
+        simpleMessagingTemplate.convertAndSend("/sub/chat/" + chatDto.getChannelId(), chatDto);
+    }
+}
+```
 
 > ## 실행 결과
 - WebSocket 요청 처리 로그 이미지
-    - publish
-        - <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
-    - subscribe
-        - <img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
+    - publish(발행)
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
+    - subscribe(구독)
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
