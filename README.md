@@ -123,11 +123,11 @@ public class WebSocketController {
 
 ###### 20230616
 > ## 계획
-- 사이드 프로젝트 BE-Login에서 진행했던 JWT 인증 가져오기(Board 관련 부분 제거)
+- 사이드 프로젝트 BE-Login(20230603)에서 진행했던 JWT 인증 가져오기(Board 관련 부분 제거)
 - 기능 : 회원가입, 로그인, 로그아웃, 토큰 재발급
 
 > ## 작성
-- 상세 정보 [BE-Login](https://github.com/nineto6/BE-Login) 참고
+- 상세 정보 [BE-Login](https://github.com/nineto6/BE-Login) 20230603까지 참고
 - 코드 작성 리스트
     - build.gradle dependency 추가
     - application.properties 코드 추가
