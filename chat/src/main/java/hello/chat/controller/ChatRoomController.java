@@ -1,8 +1,10 @@
 package hello.chat.controller;
 
 import hello.chat.common.codes.AuthConstants;
+import hello.chat.common.codes.ErrorCode;
 import hello.chat.common.codes.SuccessCode;
 import hello.chat.common.utils.TokenUtils;
+import hello.chat.config.exception.BusinessExceptionHandler;
 import hello.chat.controller.response.ApiResponse;
 import hello.chat.model.ChatRoomDto;
 import hello.chat.service.ChatRoomService;
@@ -25,6 +27,12 @@ public class ChatRoomController {
     private final ChatRoomService chatRoomService;
     @PostMapping
     public ResponseEntity<ApiResponse> createChatRoom(HttpServletRequest request, @RequestBody Map<String, String> titleMap) {
+
+        // null 또는 공백인지 확인
+        if(titleMap.get("title").isBlank()) {
+            throw new BusinessExceptionHandler("Please rewrite the title value", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
         Map<String, String> userIdAndUserNmMap = getUserIdAndUserNmInMap(request);
 
         ChatRoomDto chatRoomDto = ChatRoomDto.builder()
@@ -62,6 +70,11 @@ public class ChatRoomController {
 
     @DeleteMapping
     public ResponseEntity<ApiResponse> deleteChatRoom(HttpServletRequest request, @RequestBody Map<String, String> channelIdMap) {
+
+        if(channelIdMap.get("channelId").isBlank()) {
+            throw new BusinessExceptionHandler("Please rewrite the channelId value", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
         Map<String, String> userIdAndUserNmInMap = getUserIdAndUserNmInMap(request);
 
         chatRoomService.delete(userIdAndUserNmInMap.get("writerId"), channelIdMap.get("channelId"));

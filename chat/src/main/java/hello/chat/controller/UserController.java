@@ -9,6 +9,7 @@ import hello.chat.config.JwtToken;
 import hello.chat.config.exception.BusinessExceptionHandler;
 import hello.chat.config.redis.RedisRepository;
 import hello.chat.config.redis.RefreshToken;
+import hello.chat.controller.request.UserRequest;
 import hello.chat.controller.response.ApiResponse;
 import hello.chat.model.UserDto;
 import hello.chat.service.UserService;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,12 +45,12 @@ public class UserController {
      * @throws BusinessExceptionHandler
      */
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse> signUp(@RequestBody UserDto userDto) {
+    public ResponseEntity<ApiResponse> signUp(@Validated @RequestBody UserRequest userRequest) {
 
         UserDto user = UserDto.builder()
-                .userId(userDto.getUserId())
-                .userPw(userDto.getUserPw())
-                .userNm(userDto.getUserNm())
+                .userId(userRequest.getUserId())
+                .userPw(userRequest.getUserPw())
+                .userNm(userRequest.getUserNm())
                 .userSt("X") // 유저 상태
                 .build();
 
