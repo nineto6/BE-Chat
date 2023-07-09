@@ -23,8 +23,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class JwtAuthorizationPreHandler implements ChannelInterceptor {
-    private final RedisTemplate<String, String> redisTemplate;
-
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor headerAccessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
