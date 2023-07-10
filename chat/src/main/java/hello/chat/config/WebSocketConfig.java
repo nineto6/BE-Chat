@@ -3,6 +3,7 @@ package hello.chat.config;
 import hello.chat.config.websocket.ChatErrorHandler;
 import hello.chat.config.websocket.ChatRoomPreHandler;
 import hello.chat.config.websocket.JwtAuthorizationPreHandler;
+import hello.chat.config.websocket.ChatLogHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -18,6 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtAuthorizationPreHandler jwtAuthorizationPreHandler;
     private final ChatRoomPreHandler chatRoomPreHandler;
     private final ChatErrorHandler chatErrorHandler;
+    private final ChatLogHandler chatLogHandler;
 
     /**
      * 엔드 포인트를 등록하기 위해 registerStompEndpoints 를 override 한다.
@@ -51,5 +53,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(jwtAuthorizationPreHandler);
         registration.interceptors(chatRoomPreHandler);
+        registration.interceptors(chatLogHandler);
     }
 }
