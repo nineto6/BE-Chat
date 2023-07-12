@@ -278,8 +278,6 @@ public class TokenUtils {
 @RequiredArgsConstructor
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
-    private final RedisTemplate<String, String> redisTemplate;
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // 1. 토큰이 필요하지 않은 API URL 에 대해서 배열로 구성합니다.
@@ -1252,3 +1250,27 @@ public class WebSocketController {
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
     - subscribe(구독)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
+
+<br/>
+<hr/>
+
+###### 20230709
+> ## 계획
+- Spring Validation을 이용하여 JSON -> Object로 바인딩시 검사
+- UserRequest 객체를 만들어서 바인딩 시 검사 조건 정의
+- 바인딩에 실패시 Exception을 처리 할 ExceptionHandler 추가
+- 사용자의 연결 및 연결 해제 로그를 출력하기 위해 ChatLogHandler를 만들어서WebSocketConfig에 인터셉터 등록
+
+> ## UserRequest 작성
+
+> ## ChatRoomController 코드 변경
+
+> ## UserController 코드 변경
+
+> ## ChatLogHandler 작성
+
+> ## WebSocketConfig 코드 추가
+
+> ## GlobalExceptionHandler 코드 변경
+
+> ## 실행 결과
