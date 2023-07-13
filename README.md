@@ -1250,6 +1250,8 @@ public class WebSocketController {
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
     - subscribe(구독)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
+- 클라이언트 채팅방 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_03.png">
 
 <br/>
 <hr/>
@@ -1262,15 +1264,278 @@ public class WebSocketController {
 - 사용자의 연결 및 연결 해제 로그를 출력하기 위해 ChatLogHandler를 만들어서WebSocketConfig에 인터셉터 등록
 
 > ## UserRequest 작성
+```Java
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class UserRequest {
+
+    // 사용자 아이디 4 ~ 20자
+    @Pattern(regexp = "^[a-z0-9]{4,20}$")
+    @NotBlank
+    private String userId;
+
+    // 사용자 패스워드 "8 ~ 20자 영문 대 소문자, 숫자, 특수문자를 사용
+    @Pattern(regexp = "(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[#?!@$%^&*-]).{8,20}$")
+    @NotBlank
+    private String userPw;
+
+    // 사용자 이름
+    @NotBlank
+    @Pattern(regexp = "[가-힣]{2,5}")
+    private String userNm;
+
+    @Builder
+    public UserRequest(String userId, String userPw, String userNm) {
+        this.userId = userId;
+        this.userPw = userPw;
+        this.userNm = userNm;
+    }
+}
+```
 
 > ## ChatRoomController 코드 변경
+```Java
+@RestController
+@RequestMapping("/api/chatroom")
+@RequiredArgsConstructor
+public class ChatRoomController {
+    private final ChatRoomService chatRoomService;
+    @PostMapping
+    public ResponseEntity<ApiResponse> createChatRoom(HttpServletRequest request, @RequestBody Map<String, String> titleMap) {
+
+        // ******************* 추가 부분 *******************
+        // null 또는 공백인지 확인
+        if(titleMap.get("title").isBlank()) {
+            throw new BusinessExceptionHandler("Please rewrite the title value", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+        // *************************************************
+
+        Map<String, String> userIdAndUserNmMap = getUserIdAndUserNmInMap(request);
+
+        ChatRoomDto chatRoomDto = ChatRoomDto.builder()
+                .channelId(UUID.randomUUID().toString())
+                .title(titleMap.get("title"))
+                .writerId(userIdAndUserNmMap.get("writerId"))
+                .writerNm(userIdAndUserNmMap.get("writerNm"))
+                .dateTime(LocalDateTime.now())
+                .build();
+
+        chatRoomService.create(chatRoomDto);
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultMsg(SuccessCode.INSERT_SUCCESS.getMessage())
+                .resultCode(SuccessCode.INSERT_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse> findAllChatRoom() {
+
+        List<ChatRoomDto> chatRoomDtoList = chatRoomService.findAll();
+
+        ApiResponse ar = ApiResponse.builder()
+                .result(chatRoomDtoList)
+                .resultMsg(SuccessCode.SELECT_SUCCESS.getMessage())
+                .resultCode(SuccessCode.SELECT_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse> deleteChatRoom(HttpServletRequest request, @RequestBody Map<String, String> channelIdMap) {
+
+        // ******************* 추가 부분 *******************
+        if(channelIdMap.get("channelId").isBlank()) {
+            throw new BusinessExceptionHandler("Please rewrite the channelId value", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+        // *************************************************
+
+        Map<String, String> userIdAndUserNmInMap = getUserIdAndUserNmInMap(request);
+
+        chatRoomService.delete(userIdAndUserNmInMap.get("writerId"), channelIdMap.get("channelId"));
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultMsg(SuccessCode.DELETE_SUCCESS.getMessage())
+                .resultCode(SuccessCode.DELETE_SUCCESS.getStatus())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    /**
+     * Request 안에 존재하는 JWT token 정보를 기반으로 userId, userNm 을 Map 으로 반환하는 메서드
+     * @param request
+     * @return
+     */
+    private static Map<String, String> getUserIdAndUserNmInMap(HttpServletRequest request) {
+        // 1. Request 에서 Header 추출
+        String header = request.getHeader(AuthConstants.AUTH_HEADER);
+
+        // 2. Header 에서 JWT Refresh Token 추출
+        String token = TokenUtils.getTokenFormHeader(header);
+
+        // 3. token 으로부터 userId, userNm 추출
+        String userId = TokenUtils.getUserIdFormAccessToken(token);
+        String userNm = TokenUtils.getUserNmFormAccessToken(token);
+
+        Map<String, String> chatRoomIdAndNmMap = new HashMap<>();
+        chatRoomIdAndNmMap.put("writerId", userId);
+        chatRoomIdAndNmMap.put("writerNm", userNm);
+
+        return chatRoomIdAndNmMap;
+    }
+}
+```
 
 > ## UserController 코드 변경
+```Java
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/users")
+@Slf4j
+public class UserController {
+    private final RedisRepository refreshTokenRedisRepository;
+
+    private final RedisTemplate<String, String> redisTemplate;
+    private final UserService userService;
+
+    /**
+     * UserId, UserPw, UserNm 을 받아서 회원가입 (JwtAuthorizationFilter 인증 X)
+     * @param userDto
+     * @return ResponseEntity
+     * 언체크 예외
+     * @throws BusinessExceptionHandler
+     */
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse> signUp(@Validated @RequestBody UserRequest userRequest) {
+
+        UserDto user = UserDto.builder()
+                .userId(userDto.getUserId())
+                .userPw(userDto.getUserPw())
+                .userNm(userDto.getUserNm())
+                // **** 코드 변경 ****
+                .userId(userRequest.getUserId())
+                .userPw(userRequest.getUserPw())
+                .userNm(userRequest.getUserNm())
+                // ******************
+                .userSt("X") // 유저 상태
+                .build();
+
+        userService.signUp(user);
+
+        ApiResponse success = ApiResponse.builder()
+                .result("Create Success")
+                .resultCode(SuccessCode.INSERT_SUCCESS.getStatus())
+                .resultMsg(SuccessCode.INSERT_SUCCESS.getMessage())
+                .build();
+
+        return new ResponseEntity<>(success, HttpStatus.OK);
+    }
+
+    // ... 기존 코드 생략
+}
+```
 
 > ## ChatLogHandler 작성
+```Java
+@Component
+@Slf4j
+public class ChatLogHandler extends ChannelInterceptorAdapter {
+    @Override
+    public void postSend(Message<?> message, MessageChannel channel, boolean sent) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+
+        switch(Objects.requireNonNull(accessor.getCommand())) {
+            case CONNECT :
+                log.info("웹소켓 연결");
+                break;
+            case DISCONNECT :
+                log.info("웹소켓 연결 해제");
+                break;
+            default:
+                break;
+        }
+    }
+}
+```
 
 > ## WebSocketConfig 코드 추가
+```Java
+@Configuration
+@EnableWebSocketMessageBroker
+@RequiredArgsConstructor
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final JwtAuthorizationPreHandler jwtAuthorizationPreHandler;
+    private final ChatRoomPreHandler chatRoomPreHandler;
+    private final ChatErrorHandler chatErrorHandler;
+    private final ChatLogHandler chatLogHandler; // 추가 
 
-> ## GlobalExceptionHandler 코드 변경
+    /**
+     * 엔드 포인트를 등록하기 위해 registerStompEndpoints 를 override 한다.
+     * @param registry
+     */
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:3000")
+                .withSockJS();
+        registry.setErrorHandler(chatErrorHandler);
+    }
+
+    /**
+     * Message Broker 를 설정하기 위해 configureMessageBroker 를 override 한다.
+     * @param registry
+     */
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/sub");
+        registry.setApplicationDestinationPrefixes("/pub");
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(jwtAuthorizationPreHandler);
+        registration.interceptors(chatRoomPreHandler);
+        registration.interceptors(chatLogHandler); // 추가
+    }
+}
+```
+
+> ## GlobalExceptionHandler에 ExceptionHandler 메서드 추가
+```Java
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+    /**
+     * validation 전용 ExceptionHandler
+     * JSON -> 객체로 바인딩 시 Validation 을 진행 후 바인딩 실패 시 반환되는 Exception
+     * @param e
+     * @return ResponseEntity<ApiResponse>
+     */
+    @ExceptionHandler({MethodArgumentNotValidException.class})
+    public ResponseEntity<ApiResponse> validException(final MethodArgumentNotValidException e) {
+        log.info("valid Exception Handling Stack Trace : ", e);
+
+        ApiResponse ar = ApiResponse.builder()
+                .result("")
+                .resultCode(ErrorCode.BAD_REQUEST.getStatus())
+                .resultMsg(ErrorCode.BAD_REQUEST.getMessage())
+                .build();
+
+        return ResponseEntity.ok().body(ar);
+    }
+
+    // ... 기존 코드 생략
+}
+```
 
 > ## 실행 결과
+
+<br/>
+<hr/>
