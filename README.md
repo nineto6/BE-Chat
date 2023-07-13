@@ -1245,13 +1245,23 @@ public class WebSocketController {
 ```
 
 > ## 실행 결과
-- WebSocket 요청 처리 로그 이미지
+- 채팅방 생성
+    - 로그 이미지
+    - 응답 이미지
+- 채팅방 조회
+    - 로그 이미지
+    - 응답 이미지
+- 채팅방 삭제
+    - 로그 이미지
+    - 응답 이미지
+- 클라이언트 채팅방 이미지(로그인 O)
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_03.png">
+
+- STOMP 요청 처리 로그 이미지
     - publish(발행)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_03_pub.png">
     - subscribe(구독)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_04_sub.png">
-- 클라이언트 채팅방 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_03.png">
 
 <br/>
 <hr/>
@@ -1536,6 +1546,10 @@ public class GlobalExceptionHandler {
 ```
 
 > ## 실행 결과
+- 바인딩 시도 중에 Validation 실패 시 ExceptionHandler로 인한 BAD_REQUEST(400) 응답 이미지
+- 바인딩 시도 중에 validation 성공 시 성공 응답 이미지
+- STOMP 연결 중에 COMMAND가 CONNECT일 경우 로그 이미지(연결 성공)
+- STOMP 연결 중에 COMMAND가 DISCONNECT일 경우 로그 이미지(연결 해제)
 
 <br/>
 <hr/>
