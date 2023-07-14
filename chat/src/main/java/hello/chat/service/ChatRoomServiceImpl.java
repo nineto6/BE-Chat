@@ -41,12 +41,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public void delete(String writerId, String channelId) {
         Optional<ChatRoomDto> byChannelId = chatRoomMapper.findByChannelId(channelId);
 
-        // channelId 로 조회 후 존재할 경우 삭제
-        if(byChannelId.isPresent()) {
-            chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
+        // 채팅방이 존재하지 않을 경우 예외 throw
+        if(byChannelId.isEmpty()) {
+            throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
         }
 
-        // 채팅방이 존재하지 않을 경우 예외 throw
-        throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        // channelId 로 조회 후 존재할 경우 삭제
+        chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
     }
 }
