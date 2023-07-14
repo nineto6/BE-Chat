@@ -622,6 +622,7 @@ public interface ChatRoomMapper {
     void save(ChatRoomDto chatRoomDto); // 저장
     Optional<ChatRoomDto> findByChannelId(String chanelId); // 채널 아이디로 조회
     List<ChatRoomDto> findAll(); // 모두 조회
+    Optional<ChatRoomDto> findByWriterIdAndChannelId(@Param("writerId") String writerId, @Param("channelId") String channelId); // 새성 아이디 AND 채널 아이디로 조회
     void deleteByWriterIdAndChannelId(@Param("writerId") String writerId, @Param("channelId") String channelId); // 생성 아이디 AND 채널 아이디로 삭제
 }
 ```
@@ -652,6 +653,14 @@ public interface ChatRoomMapper {
         SELECT t1.*
         FROM TB_CHAT_ROOM t1
     </select>
+
+    <!-- writerId 와 channelId 로 ChatRoom 조회 -->
+    <select id="findByWriterIdAndChannelId" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+        WHERE WRITER_ID = #{writerId} AND CHANNEL_ID = #{channelId}
+    </select>
+
 
     <!-- writerId 와 channelId 로 ChatRoom 삭제 -->
     <delete id="deleteByWriterIdAndChannelId">
@@ -871,14 +880,22 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public void delete(String writerId, String channelId) {
         Optional<ChatRoomDto> byChannelId = chatRoomMapper.findByChannelId(channelId);
 
-        // channelId 로 조회 후 존재할 경우 삭제
-        if(byChannelId.isPresent()) {
-            chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
+        // 채팅방이 존재하지 않을 경우 예외 throw
+        if(byChannelId.isEmpty()) {
+            throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
         }
 
-        // 채팅방이 존재하지 않을 경우 예외 throw
-        throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        Optional<ChatRoomDto> byWriterIdAndChannelId = chatRoomMapper.findByWriterIdAndChannelId(writerId, channelId);
+
+        // 사용자 정보로 된 채팅방이 아닐경우 예외 throw
+        if(byWriterIdAndChannelId.isEmpty()) {
+            throw new BusinessExceptionHandler("not your chat room", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
+        // 존재할 경우 삭제
+        chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
     }
+}
 }
 ```
 
@@ -1247,13 +1264,34 @@ public class WebSocketController {
 > ## 실행 결과
 - 채팅방 생성
     - 로그 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_06_1.png">
     - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_06_2.png">
+
 - 채팅방 조회
     - 로그 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_07_1.png">
     - 응답 이미지
-- 채팅방 삭제
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_07_2.png">
+
+- 채팅방 삭제 성공
     - 로그 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_1.png">
     - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_2.png">
+
+- 채팅방이 존재하지 않을경우
+    - 로그 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_1.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_2.png">
+
+- 채팅방 삭제 시 사용자의 채팅방이 아닐 경우
+    - 로그 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_10_1.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_10_2.png">
+
 - 클라이언트 채팅방 이미지(로그인 O)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_03.png">
 
@@ -1439,7 +1477,7 @@ public class UserController {
         userService.signUp(user);
 
         ApiResponse success = ApiResponse.builder()
-                .result("Create Success")
+                .result("")
                 .resultCode(SuccessCode.INSERT_SUCCESS.getStatus())
                 .resultMsg(SuccessCode.INSERT_SUCCESS.getMessage())
                 .build();
@@ -1547,8 +1585,13 @@ public class GlobalExceptionHandler {
 
 > ## 실행 결과
 - 바인딩 시도 중에 Validation 실패 시 ExceptionHandler로 인한 BAD_REQUEST(400) 응답 이미지
+<br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_11.png">
+
 - 바인딩 시도 중에 validation 성공 시 성공 응답 이미지
+<br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_12.png">
+
 - STOMP 연결 중에 COMMAND가 CONNECT일 경우 로그 이미지(연결 성공)
+
 - STOMP 연결 중에 COMMAND가 DISCONNECT일 경우 로그 이미지(연결 해제)
 
 <br/>
