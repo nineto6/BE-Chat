@@ -1,13 +1,39 @@
 # 🛠️NINETO6 사이드프로젝트 만들기
 
 ## 시작하기 전에...
-WebSocket 위에서 동작하는 STOMP(Simple Text Oriented Messaging Protocol)를 이용하여 실시간 채팅방을 구현해보려고 한다.
+1. WebSocket 위에서 동작하는 STOMP(Simple Text Oriented Messaging Protocol)를 이용하여 실시간 채팅방을 구현해보려 한다.
+2. Spring Security와 Json Web Token을 이용하여 REST API 및 STOMP  인증 처리를 구현해보려 한다.
 
-> 현재 `Front-End` 와 `Back-End` 는 다른 환경에서 개발하고 있음
+> Spring Boot + React 프로젝트 <br>
+
+> 현재 `Back-End` 와 `Front-End` 는 다른 환경에서 개발하고 있음
 
 ## 요구사항
-어떤 사용자는 회원가입 후 로그인을 진행하여 인증된 사용자인 경우에만 채팅방 생성 및 입장할 수 있으며,
-생성된 채팅방은 다른 사용자의 채팅방 목록에 뜨게 되어 채팅방 입장시 실시간 채팅을 할 수 있게 한다.
+- 사용자는 회원가입 후 로그인을 진행하여 인증된 사용자인 경우에만 채팅방 생성 및 입장할 수 있으며,
+생성된 채팅방은 채팅방 목록에 뜨게 되어 여러 사용자들이 채팅방에 입장하여 실시간 채팅을 할 수 있게 한다.
+- 자신이 생성한 채팅방은 자신만이 제거할 수 있다.
+
+### 인증 없이 접근 가능
+|기능|URL|
+|------|---|
+|회원가입|[POST] /api/users/signup|
+|로그인|[GET] /api/users/login|
+|사용자 아이디 중복 체크|[GET] /api/users/duplicheck?userId=사용자아이디|
+
+### 인증이 있어야 접근 가능
+|기능|URL|
+|------|---|
+|로그아웃|[GET] /api/users/logout|
+|메세지 구독|[SockJS] /ws/sub/chat|
+|메세지 발행|[SockJS] /ws/pub/chat|
+|채팅방 생성|[POST] /api/chatroom|
+|채팅방 조회|[GET] /api/chatroom|
+|채팅방 삭제|[DELETE] /api/chatroom|
+
+### Refresh-Token을 가지고 Access-Token을 재발급
+|기능|URL|
+|------|---|
+|재발급|[GET] /api/users/reissue|
 
 ## 출처
 - STOMP를 참고한 사이트 출처
@@ -1280,7 +1306,7 @@ public class WebSocketController {
     - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_1.png">
 
-- 채팅방이 존재하지 않을경우
+- 채팅방 삭제 시 채팅방이 존재하지 않을경우
     - 로그 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_2.png">
     - 응답 이미지
@@ -1587,7 +1613,7 @@ public class GlobalExceptionHandler {
 - 바인딩 시도 중에 Validation 실패 시 ExceptionHandler로 인한 BAD_REQUEST(400) 응답 이미지
 <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_11.png">
 
-- 바인딩 시도 중에 validation 성공 시 성공 응답 이미지
+- 바인딩 시도 중에 Validation 성공 응답 이미지
 <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_12.png">
 
 - STOMP 연결 중에 COMMAND가 CONNECT일 경우 로그 이미지(연결 성공)
