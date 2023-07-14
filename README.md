@@ -1264,33 +1264,33 @@ public class WebSocketController {
 > ## 실행 결과
 - 채팅방 생성
     - 로그 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_06_1.png">
-    - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_06_2.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_06_1.png">
 
 - 채팅방 조회
     - 로그 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_07_1.png">
-    - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_07_2.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_07_1.png">
 
 - 채팅방 삭제 성공
     - 로그 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_1.png">
-    - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_2.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_08_1.png">
 
 - 채팅방이 존재하지 않을경우
     - 로그 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_1.png">
-    - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_2.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_09_1.png">
 
 - 채팅방 삭제 시 사용자의 채팅방이 아닐 경우
     - 로그 이미지
-    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_10_1.png">
-    - 응답 이미지
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_10_2.png">
+    - 응답 이미지
+    <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/be_resource_10_1.png">
 
 - 클라이언트 채팅방 이미지(로그인 O)
     <br><img src="https://github.com/nineto6/BE-Chat/blob/main/md_resource/fe_resource_03.png">
