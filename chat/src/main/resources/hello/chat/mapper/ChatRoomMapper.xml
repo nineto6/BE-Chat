@@ -23,6 +23,12 @@
         FROM TB_CHAT_ROOM t1
     </select>
 
+    <select id="findByWriterIdAndChannelId" resultType="hello.chat.model.ChatRoomDto">
+        SELECT t1.*
+        FROM TB_CHAT_ROOM t1
+        WHERE WRITER_ID = #{writerId} AND CHANNEL_ID = #{channelId}
+    </select>
+
     <!-- writerId 와 channelId 로 ChatRoom 삭제 -->
     <delete id="deleteByWriterIdAndChannelId">
         DELETE FROM TB_CHAT_ROOM

@@ -46,7 +46,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new BusinessExceptionHandler("chat room does not exist", ErrorCode.BUSINESS_EXCEPTION_ERROR);
         }
 
-        // channelId 로 조회 후 존재할 경우 삭제
+        Optional<ChatRoomDto> byWriterIdAndChannelId = chatRoomMapper.findByWriterIdAndChannelId(writerId, channelId);
+
+        // 사용자 정보로 된 채팅방이 아닐경우 예외 throw
+        if(byWriterIdAndChannelId.isEmpty()) {
+            throw new BusinessExceptionHandler("not your chat room", ErrorCode.BUSINESS_EXCEPTION_ERROR);
+        }
+
+        // 존재할 경우 삭제
         chatRoomMapper.deleteByWriterIdAndChannelId(writerId, channelId);
     }
 }
