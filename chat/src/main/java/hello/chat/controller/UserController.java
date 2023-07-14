@@ -57,7 +57,7 @@ public class UserController {
         userService.signUp(user);
 
         ApiResponse success = ApiResponse.builder()
-                .result("Create Success")
+                .result("")
                 .resultCode(SuccessCode.INSERT_SUCCESS.getStatus())
                 .resultMsg(SuccessCode.INSERT_SUCCESS.getMessage())
                 .build();
